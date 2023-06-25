@@ -2,6 +2,8 @@
 
 .PHONY: build
 
+build-all: build-mac build-linux build-windows
+
 build-mac:
 	@echo " > Building [license-hwid] for mac..."
 	@GOOS=darwin GOARCH=amd64 go build -o ./bin/license_mac

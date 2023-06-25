@@ -13,7 +13,7 @@ import (
 )
 
 // this is a secret method. move it to local file.
-func CreateLicense(id, pathPrivateKey string, isDebug bool) {
+func CreateLicense(id, hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string) {
 	// machine ID must be hashed to obscure what we actually use as license
 	// can't use machineid.ProtectedID since need to use same hash function given to rsa.SignPSS
 	hash := crypto.SHA256.New()
@@ -56,9 +56,11 @@ func CreateLicense(id, pathPrivateKey string, isDebug bool) {
 		fmt.Println(sig)
 	}
 
-	out := fmt.Sprintf("license.%d", time.Now().Unix())
-	err = os.WriteFile(out, lic, os.ModePerm)
+	lfp := fmt.Sprintf("./license_issued/license.%s.%d", hwlabel, time.Now().Unix())
+	err = os.WriteFile(lfp, lic, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
+
+	return hid, lfp
 }
