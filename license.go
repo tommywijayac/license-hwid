@@ -1,24 +1,31 @@
 package main
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
+
+	"github.com/denisbrodbeck/machineid"
 )
 
-// this is a secret method. move it to local file.
-func CreateLicense(id, hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string) {
-	// machine ID must be hashed to obscure what we actually use as license
-	// can't use machineid.ProtectedID since need to use same hash function given to rsa.SignPSS
-	hash := crypto.SHA256.New()
-	_, err := hash.Write([]byte(id))
+func createLicense(hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string) {
+	id, err := machineid.ID()
 	if err != nil {
+		panic(err)
+	}
+
+	hash := crypto.SHA256.New()
+	if _, err := hash.Write([]byte(id)); err != nil {
 		panic(err)
 	}
 	hid := hash.Sum(nil)
@@ -47,13 +54,14 @@ func CreateLicense(id, hwlabel, pathPrivateKey string, isDebug bool) ([]byte, st
 
 	lic := make([]byte, 2)
 	binary.LittleEndian.PutUint16(lic, uint16(len(hid)))
+
 	lic = append(lic, hid...)
 	lic = append(lic, sig...)
 
 	if isDebug {
-		fmt.Println(len(hid))
-		fmt.Println(hid)
-		fmt.Println(sig)
+		fmt.Println("lenhid", len(hid))
+		fmt.Println("string hid", base64.StdEncoding.EncodeToString(hid))
+		fmt.Println("string sig", base64.StdEncoding.EncodeToString(sig))
 	}
 
 	lfp := fmt.Sprintf("./license_issued/license.%s.%d", hwlabel, time.Now().Unix())
@@ -63,4 +71,57 @@ func CreateLicense(id, hwlabel, pathPrivateKey string, isDebug bool) ([]byte, st
 	}
 
 	return hid, lfp
+}
+
+func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
+	// load license
+	license, err := os.Open(pathLicense)
+	if err != nil {
+		return false, fmt.Errorf("fail to open license: %s", err.Error())
+	}
+	bylicense, err := io.ReadAll(license)
+	if err != nil {
+		return false, fmt.Errorf("fail to parse license: %s", err.Error())
+	}
+
+	// parse license element
+	offset := binary.LittleEndian.Uint16(bylicense[:2])
+	hid := bylicense[2 : 2+offset]
+	sig := bylicense[2+offset:]
+
+	// load public key
+	bypempub, err := os.ReadFile(pathPublicKey)
+	if err != nil {
+		return false, fmt.Errorf("fail to open public key: %s", err.Error())
+	}
+	block, _ := pem.Decode(bypempub)
+	if block == nil {
+		return false, fmt.Errorf("fail to decode public key")
+	}
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("fail to parse public key: %s", err.Error())
+	}
+
+	// validate signature
+	if err := rsa.VerifyPSS(publicKey.(*rsa.PublicKey), crypto.SHA256, hid[:], sig, nil); err != nil {
+		return false, err
+	}
+
+	// validate content
+	id, err := machineid.ID()
+	if err != nil {
+		panic(err)
+	}
+
+	hash := crypto.SHA256.New()
+	if _, err := hash.Write([]byte(id)); err != nil {
+		panic(err)
+	}
+	wanthid := hash.Sum(nil)
+
+	if !bytes.Equal(wanthid, hid) {
+		return false, errors.New("invalid license")
+	}
+	return true, nil
 }

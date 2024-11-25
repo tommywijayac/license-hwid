@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 type Repo interface {
@@ -18,20 +20,15 @@ type repo struct {
 const dbPath string = "./repo/license_log.json"
 
 type Database struct {
-	Metadata Metadata     `json:"metadata"`
-	Data     []LicenseLog `json:"data"`
-}
-
-type Metadata struct {
-	NextID int64 `json:"next_id"`
+	Data []LicenseLog `json:"data"`
 }
 
 type LicenseLog struct {
-	ID              int64  `json:"id"`
-	HashedMachineID []byte `json:"hashed_machine_id"`
-	LicenseFilepath string `json:"license_filepath"`
-	HardwareLabel   string `json:"hardware_label"`
-	CreatedTime     string `json:"created_time"`
+	ID              uuid.UUID `json:"id"`
+	HashedMachineID []byte    `json:"hashed_machine_id"`
+	LicenseFilepath string    `json:"license_filepath"`
+	HardwareLabel   string    `json:"hardware_label"`
+	CreatedTime     string    `json:"created_time"`
 }
 
 func New() Repo {
@@ -62,7 +59,7 @@ func (r *repo) Add(log LicenseLog) {
 	}
 	defer f.Close()
 
-	log.ID = r.db.Metadata.NextID
+	log.ID = uuid.New()
 	r.db.Data = append(r.db.Data, log)
 
 	jsonb, err := json.MarshalIndent(r.db, "", "\t")

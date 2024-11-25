@@ -4,19 +4,27 @@ import (
 	"flag"
 	"log"
 	"time"
-	"whiteboard/license/repo"
 
 	"github.com/denisbrodbeck/machineid"
+
+	"github.com/tommywijayac/license-hwid/repo"
 )
 
 func main() {
 	pGetID := flag.Bool("get_id", false, "get id")
 	pGenerate := flag.Bool("generate", false, "generate license")
-	pGenerate_ID := flag.String("id", "", "id")
 	pGenerate_HWLabel := flag.String("hwlabel", "", "hardware label")
 	pGenerate_Debug := flag.Bool("debug", false, "debug")
 
+	// scripts
+	pHelperRSA := flag.Bool("rsa", false, "helper to generate public & private key")
+
 	flag.Parse()
+
+	if *pHelperRSA {
+		GenerateRSAKey()
+		return // ignore other flags
+	}
 
 	if *pGetID {
 		id, err := machineid.ID()
@@ -24,19 +32,14 @@ func main() {
 			log.Print("ERR: ", err)
 		}
 
-		log.Print("id = ", id)
+		log.Printf("id = %s", id)
 		return
 	}
 
 	if *pGenerate {
 		db := repo.New()
 
-		if len(*pGenerate_ID) == 0 {
-			log.Print("ERR: generate: empty id")
-			return
-		}
-
-		hid, lfp := CreateLicense(*pGenerate_ID, *pGenerate_HWLabel, "./rsa", *pGenerate_Debug)
+		hid, lfp := createLicense(*pGenerate_HWLabel, "./secret/rsa", *pGenerate_Debug)
 
 		db.Add(repo.LicenseLog{
 			HashedMachineID: hid,

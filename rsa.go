@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// should be only ran once.
+// GenerateRSAKey is a helper function to create pairs of private and public key.
 func GenerateRSAKey() {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -20,7 +20,7 @@ func GenerateRSAKey() {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: byPrivate,
 	})
-	_ = os.WriteFile("./script/rsa", pemPrivate, 0644)
+	_ = os.WriteFile("./secret/rsa", pemPrivate, 0644)
 
 	byPublic, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
@@ -30,5 +30,5 @@ func GenerateRSAKey() {
 		Type:  "RSA PUBLIC KEY",
 		Bytes: byPublic,
 	})
-	_ = os.WriteFile("./script/rsa.pub", pemPublic, 0644)
+	_ = os.WriteFile("./secret/rsa.pub", pemPublic, 0644)
 }
