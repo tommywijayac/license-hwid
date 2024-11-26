@@ -1,18 +1,24 @@
 # Steps
 ## Setup (one-time)
 1. Generate `gen`
-`go build -o gen .`
+```
+go build -o gen .
+```
 
-2. Create your RSA key pairs
-`./gen -rsa`
+3. Create your RSA key pairs
+```
+./gen -rsa
+```
 
 ## Usage
 1. Generate license for `machine-a`
-`./gen -generate -hwlabel=machine-a`
+```
+./gen -generate -hwlabel=machine-a
+```
 
-2. Move RSA public key and license to target machine
+3. Move RSA public key and license to target machine
 
-3. Adjust software code
+4. Adjust software code
 ```
 import (
   lic "github.com/tommywijayac/license-hwid"
