@@ -27,7 +27,7 @@ import (
 func main() {
   want := []byte(``) // hardcoded expected RSA public key
   isParameterValid, err := lic.ValidatePublicKey(want, "path/to/public-key")
-  if !isPKValid {
+  if !isParameterValid {
     // do your thing
     os.Exit(1)
   }
