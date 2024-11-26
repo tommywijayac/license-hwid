@@ -73,6 +73,36 @@ func createLicense(hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string
 	return hid, lfp
 }
 
+func ValidatePublicKey(wantBypempub []byte, pathPublicKey string) (bool, error) {
+	parse := func(bypempub []byte) (*rsa.PublicKey, error) {
+		block, _ := pem.Decode(bypempub)
+		if block == nil {
+			return nil, fmt.Errorf("fail to decode public key")
+		}
+		publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("fail to parse public key: %s", err.Error())
+		}
+		return publicKey.(*rsa.PublicKey), nil
+	}
+
+	want, err := parse(wantBypempub)
+	if err != nil {
+		return false, err
+	}
+
+	bypempub, err := os.ReadFile(pathPublicKey)
+	if err != nil {
+		return false, fmt.Errorf("fail to open public key: %s", err.Error())
+	}
+	got, err := parse(bypempub)
+	if err != nil {
+		return false, err
+	}
+
+	return want.Equal(got), nil
+}
+
 func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
 	// load license
 	license, err := os.Open(pathLicense)
