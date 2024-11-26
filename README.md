@@ -16,9 +16,9 @@ go build -o gen .
 ./gen -generate -hwlabel=machine-a
 ```
 
-3. Move RSA public key and license to target machine
+2. Move RSA public key and license to target machine
 
-4. Adjust software code
+3. Adjust software code
 ```
 import (
   lic "github.com/tommywijayac/license-hwid"
@@ -27,7 +27,7 @@ import (
 func main() {
   want := []byte(``) // hardcoded expected RSA public key
   isParameterValid, err := lic.ValidatePublicKey(want, "path/to/public-key")
-  if !isParameterValid {
+  if err != nil || !isParameterValid {
     // do your thing
     os.Exit(1)
   }
