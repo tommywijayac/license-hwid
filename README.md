@@ -11,6 +11,9 @@ cd generator && mkdir -m 777 bin && go build -o bin/gen .
 ```
 
 ## Usage
+TODO: should open machine id as args
+TODO: should add instruction how to get target machine id
+
 1. Generate license for `machine-a`
 ```
 ./bin/gen -generate -hwlabel=machine-a
