@@ -2,18 +2,18 @@
 ## Setup (one-time)
 1. Generate `gen`
 ```
-go build -o gen .
+cd generator && mkdir -m 777 bin && go build -o bin/gen .
 ```
 
 3. Create your RSA key pairs
 ```
-./gen -rsa
+./bin/gen -rsa
 ```
 
 ## Usage
 1. Generate license for `machine-a`
 ```
-./gen -generate -hwlabel=machine-a
+./bin/gen -generate -hwlabel=machine-a
 ```
 
 2. Move RSA public key and license to target machine
