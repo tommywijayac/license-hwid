@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
-
-	"github.com/tommywijayac/license-hwid/repo"
+	lic "github.com/tommywijayac/license-hwid"
+	"github.com/tommywijayac/license-hwid/generator/repo"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	if *pHelperVerify {
-		fmt.Println(ValidateLicense("./secret/rsa.pub", "./license_issued/license.desktop_ubuntu.1732548673"))
+		fmt.Println(lic.ValidateLicense("./secret/rsa.pub", "./license_issued/license.desktop_ubuntu.1732548673"))
 		panic("exit")
 	}
 
