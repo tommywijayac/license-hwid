@@ -79,6 +79,8 @@ func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("fail to open license: %s", err.Error())
 	}
+	defer license.Close()
+
 	bylicense, err := io.ReadAll(license)
 	if err != nil {
 		return false, fmt.Errorf("fail to parse license: %s", err.Error())

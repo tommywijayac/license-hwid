@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,11 +20,18 @@ func main() {
 	// scripts
 	pHelperRSA := flag.Bool("rsa", false, "helper to generate public & private key")
 
+	pHelperVerify := flag.Bool("v", false, "")
+
 	flag.Parse()
 
 	if *pHelperRSA {
 		GenerateRSAKey()
 		return // ignore other flags
+	}
+
+	if *pHelperVerify {
+		fmt.Println(ValidateLicense("./secret/rsa.pub", "./license_issued/license.desktop_ubuntu.1732548673"))
+		panic("exit")
 	}
 
 	if *pGetID {
