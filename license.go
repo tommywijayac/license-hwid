@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
@@ -85,11 +84,6 @@ func ValidateLicense(pathPublicKey, pathLicense string, runtimeInfo []byte) (boo
 	fnRead(lensig, &sig, &cursor)
 	fnRead(lencontent, &hid, &cursor)
 	fnRead(leninfo, &info, &cursor)
-
-	// TODO: remove
-	fmt.Println("string sig", base64.StdEncoding.EncodeToString(sig))
-	fmt.Println("string hid", string(hid))
-	fmt.Println("string info", string(info))
 
 	// load public key
 	bypempub, err := os.ReadFile(pathPublicKey)
