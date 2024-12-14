@@ -2,7 +2,8 @@
 ## Setup (one-time)
 1. Generate `gen`
 ```
-cd generator && mkdir -m 777 bin && go build -o bin/gen .
+cd generator && mkdir -m 777 bin && mkdir -m 777 secret && mkdir -m 777 license_issued
+go build -o bin/gen .
 ```
 
 3. Create your RSA key pairs
@@ -16,7 +17,7 @@ TODO: should add instruction how to get target machine id
 
 1. Generate license for `machine-a`
 ```
-./bin/gen -generate -hwlabel=machine-a
+ ./bin/gen -generate -hwlabel=machine-a
 ```
 
 2. Move RSA public key and license to target machine

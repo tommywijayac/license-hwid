@@ -10,24 +10,39 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"time"
-
-	"github.com/denisbrodbeck/machineid"
 )
 
-func createLicense(hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string) {
-	id, err := machineid.ID()
-	if err != nil {
-		panic(err)
-	}
+func createLicense(hwLabel, hwID, pathAddInfo, pathPrivateKey string, isDebug bool) (string, string) {
+	var (
+		err     error
+		hid     []byte
+		info    []byte
+		content []byte
+	)
 
 	hash := crypto.SHA256.New()
-	if _, err := hash.Write([]byte(id)); err != nil {
+
+	// Add machine id to content
+	if _, err := hash.Write([]byte(hwID)); err != nil {
 		panic(err)
 	}
-	hid := hash.Sum(nil)
+	hid = []byte(hwID)
 
-	// load private key
+	// Add additional info to content (optional)
+	if len(pathAddInfo) > 0 {
+		info, err = os.ReadFile(pathAddInfo)
+		if err != nil {
+			panic(err)
+		}
+
+		if _, err := hash.Write(info); err != nil {
+			panic(err)
+		}
+	}
+	content = hash.Sum(nil)
+
+	// Create signature from license content.
+	// It can be verified later with public key pair to ensure we generate the license & not tampered.
 	bypempk, err := os.ReadFile(pathPrivateKey)
 	if err != nil {
 		panic(err)
@@ -41,31 +56,32 @@ func createLicense(hwlabel, pathPrivateKey string, isDebug bool) ([]byte, string
 		panic(err)
 	}
 
-	// create signature from the hashed machine ID with it,
-	// which can be verified with pub key by app to authenticate that we issue this license
-	// in case that user manage to know our verification method (using machine ID) and generate their own license.
-	sig, err := rsa.SignPSS(rand.Reader, privateKey, crypto.SHA256, hid[:], nil)
+	sig, err := rsa.SignPSS(rand.Reader, privateKey, crypto.SHA256, content[:], nil)
 	if err != nil {
 		panic(err)
 	}
 
-	lic := make([]byte, 2)
-	binary.LittleEndian.PutUint16(lic, uint16(len(hid)))
+	// Compose license
+	lic := make([]byte, 6)
+	binary.LittleEndian.PutUint16(lic[:2], uint16(len(sig)))
+	binary.LittleEndian.PutUint16(lic[2:4], uint16(len(hid)))
+	binary.LittleEndian.PutUint16(lic[4:6], uint16(len(info)))
 
-	lic = append(lic, hid...)
 	lic = append(lic, sig...)
+	lic = append(lic, hid...)
+	lic = append(lic, info...)
 
 	if isDebug {
-		fmt.Println("lenhid", len(hid))
-		fmt.Println("string hid", base64.StdEncoding.EncodeToString(hid))
 		fmt.Println("string sig", base64.StdEncoding.EncodeToString(sig))
+		fmt.Println("string hid", string(hid))
+		fmt.Println("string info", string(info))
 	}
 
-	lfp := fmt.Sprintf("./license_issued/license.%s.%d", hwlabel, time.Now().Unix())
+	lfp := fmt.Sprintf("./license_issued/license.%s", hwLabel)
 	err = os.WriteFile(lfp, lic, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	return hid, lfp
+	return string(info), lfp
 }

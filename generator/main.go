@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
@@ -15,6 +16,8 @@ func main() {
 	pGetID := flag.Bool("get_id", false, "get id")
 	pGenerate := flag.Bool("generate", false, "generate license")
 	pGenerate_HWLabel := flag.String("hwlabel", "", "hardware label")
+	pGenerate_HWID := flag.String("hwid", "", "machine id")
+	pGenerate_AddInfo := flag.String("info", "", "path to file containing additional info to be validated. must not be sensitive")
 	pGenerate_Debug := flag.Bool("debug", false, "debug")
 
 	// scripts
@@ -30,7 +33,12 @@ func main() {
 	}
 
 	if *pHelperVerify {
-		fmt.Println(lic.ValidateLicense("./secret/rsa.pub", "./license_issued/license.desktop_ubuntu.1732548673"))
+		info, err := os.ReadFile(*pGenerate_AddInfo)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(lic.ValidateLicense("./secret/rsa.pub", "./license_issued/license.mac", info))
 		panic("exit")
 	}
 
@@ -47,10 +55,21 @@ func main() {
 	if *pGenerate {
 		db := repo.New()
 
-		hid, lfp := createLicense(*pGenerate_HWLabel, "./secret/rsa", *pGenerate_Debug)
+		if len(*pGenerate_HWID) == 0 {
+			panic("id must be set")
+		}
+
+		info, lfp := createLicense(
+			*pGenerate_HWLabel,
+			*pGenerate_HWID,
+			*pGenerate_AddInfo,
+			"./secret/rsa",
+			*pGenerate_Debug,
+		)
 
 		db.Add(repo.LicenseLog{
-			HashedMachineID: hid,
+			HashedMachineID: *pGenerate_HWID,
+			AdditionalInfo:  info,
 			LicenseFilepath: lfp,
 			HardwareLabel:   *pGenerate_HWLabel,
 			CreatedTime:     time.Now().Format(time.RFC3339),

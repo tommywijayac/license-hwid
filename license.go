@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
@@ -45,7 +46,7 @@ func ValidatePublicKey(wantBypempub []byte, pathPublicKey string) (bool, error) 
 	return want.Equal(got), nil
 }
 
-func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
+func ValidateLicense(pathPublicKey, pathLicense string, runtimeInfo []byte) (bool, error) {
 	// load license
 	license, err := os.Open(pathLicense)
 	if err != nil {
@@ -58,10 +59,37 @@ func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
 		return false, fmt.Errorf("fail to parse license: %s", err.Error())
 	}
 
-	// parse license element
-	offset := binary.LittleEndian.Uint16(bylicense[:2])
-	hid := bylicense[2 : 2+offset]
-	sig := bylicense[2+offset:]
+	// parse license content
+	var (
+		lensig     uint16
+		lencontent uint16
+		leninfo    uint16
+
+		sig  []byte
+		hid  []byte
+		info []byte
+	)
+
+	cursor := 0
+	fnReadHeader := func(v *uint16, cursor *int) {
+		*v = binary.LittleEndian.Uint16(bylicense[*cursor : *cursor+2])
+		*cursor += 2
+	}
+	fnRead := func(length uint16, v *[]byte, cursor *int) {
+		*v = bylicense[*cursor : *cursor+int(length)]
+		*cursor += int(length)
+	}
+	fnReadHeader(&lensig, &cursor)
+	fnReadHeader(&lencontent, &cursor)
+	fnReadHeader(&leninfo, &cursor)
+	fnRead(lensig, &sig, &cursor)
+	fnRead(lencontent, &hid, &cursor)
+	fnRead(leninfo, &info, &cursor)
+
+	// TODO: remove
+	fmt.Println("string sig", base64.StdEncoding.EncodeToString(sig))
+	fmt.Println("string hid", string(hid))
+	fmt.Println("string info", string(info))
 
 	// load public key
 	bypempub, err := os.ReadFile(pathPublicKey)
@@ -77,25 +105,26 @@ func ValidateLicense(pathPublicKey, pathLicense string) (bool, error) {
 		return false, fmt.Errorf("fail to parse public key: %s", err.Error())
 	}
 
-	// validate signature
-	if err := rsa.VerifyPSS(publicKey.(*rsa.PublicKey), crypto.SHA256, hid[:], sig, nil); err != nil {
+	// validate license integrity using its signature
+	hash := crypto.SHA256.New()
+	_, _ = hash.Write(hid) // intentionally making it vague
+	_, _ = hash.Write(info)
+	content := hash.Sum(nil)
+	if err := rsa.VerifyPSS(publicKey.(*rsa.PublicKey), crypto.SHA256, content[:], sig, nil); err != nil {
 		return false, err
 	}
 
-	// validate content
-	id, err := machineid.ID()
+	// validate against runtime value
+	runtimeID, err := machineid.ID()
 	if err != nil {
 		panic(err)
 	}
-
-	hash := crypto.SHA256.New()
-	if _, err := hash.Write([]byte(id)); err != nil {
-		panic(err)
-	}
-	wanthid := hash.Sum(nil)
-
-	if !bytes.Equal(wanthid, hid) {
+	if !bytes.Equal(hid, []byte(runtimeID)) {
 		return false, errors.New("invalid license")
 	}
+	if !bytes.Equal(info, runtimeInfo) {
+		return false, errors.New("invalid license")
+	}
+
 	return true, nil
 }

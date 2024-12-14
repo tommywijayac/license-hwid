@@ -25,7 +25,8 @@ type Database struct {
 
 type LicenseLog struct {
 	ID              uuid.UUID `json:"id"`
-	HashedMachineID []byte    `json:"hashed_machine_id"`
+	HashedMachineID string    `json:"hashed_machine_id"`
+	AdditionalInfo  string    `json:"additional_info"`
 	LicenseFilepath string    `json:"license_filepath"`
 	HardwareLabel   string    `json:"hardware_label"`
 	CreatedTime     string    `json:"created_time"`
